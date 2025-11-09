@@ -1,4 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Determine API base (same logic as other frontend scripts)
+  const API_BASE = (function(){
+    if (location.protocol === 'file:') return 'http://localhost:5000';
+    if (location.hostname === '127.0.0.1' && location.port === '5500') return 'http://localhost:5000';
+    return '';
+  })();
+
   const form = document.getElementById('loginForm');
   const status = document.getElementById('loginStatus');
   const btn = document.getElementById('loginBtn');
@@ -8,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     try {
-      const res = await fetch('/api/login', {
+      const res = await fetch(API_BASE + '/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -23,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // store token in sessionStorage
         sessionStorage.setItem('authToken', json.token);
         // redirect to index with success
-        window.location.href = '/index.html?login=success';
+        window.location.href = API_BASE + '/index.html?login=success';
       } else {
         status.textContent = 'Login failed';
       }

@@ -1,4 +1,11 @@
-const API_URL = "/api/campaigns";
+// Match logic in script.js: prefer same-origin relative requests; when opened via
+// file:// or Live Server use the backend at http://localhost:5000.
+const API_BASE = (function(){
+  if (location.protocol === 'file:') return 'http://localhost:5000';
+  if (location.hostname === '127.0.0.1' && location.port === '5500') return 'http://localhost:5000';
+  return '';
+})();
+const API_URL = API_BASE + '/api/campaigns';
 
 async function loadDashboard() {
   try {

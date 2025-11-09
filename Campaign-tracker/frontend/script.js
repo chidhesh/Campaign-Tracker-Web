@@ -1,4 +1,15 @@
-const API_URL = "/api/campaigns";
+// Determine API base: when the page is served from the backend (same origin)
+// use relative paths. When opened via file:// or Live Server (127.0.0.1:5500),
+// the backend is likely running on http://localhost:5000 — use that as a fallback.
+const API_BASE = (function(){
+  // file:// pages have protocol 'file:' -> need to point to backend
+  if (location.protocol === 'file:') return 'http://localhost:5000';
+  // common Live Server default port
+  if (location.hostname === '127.0.0.1' && location.port === '5500') return 'http://localhost:5000';
+  // if page is served by backend (same origin), use empty base so relative paths hit same origin
+  return '';
+})();
+const API_URL = API_BASE + '/api/campaigns';
 
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("campaignForm");

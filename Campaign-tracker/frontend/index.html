@@ -8,27 +8,31 @@
 </head>
 <body>
   <script>
-    // Auth check: verify token if present, but don't force-redirect guests.
-    // This allows the dashboard and campaigns table to be visible to unauthenticated users.
+    // Require login before allowing access to the main page.
+    // If no token is present, redirect to /login.html. If a token exists,
+    // verify it with the server; if invalid, clear it and redirect to login.
     (async function(){
       try {
         const params = new URLSearchParams(location.search);
         const token = sessionStorage.getItem('authToken');
 
-        // If a token exists, verify it with the server. If verification fails, remove it.
-        if (token) {
-          try {
-            const res = await fetch('/api/verify', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ token }) });
-            if (!res.ok) throw new Error('Invalid token');
-            const json = await res.json();
-            if (!json || !json.valid) throw new Error('Invalid token');
-          } catch (err) {
-            console.warn('Token invalid, clearing stored token', err);
-            sessionStorage.removeItem('authToken');
-          }
-        } else {
-          // No token: continue as guest (do not redirect). Login page remains available at /login.html.
-          console.info('No auth token found; continuing as guest.');
+        if (!token) {
+          // No token — force login page
+          location.replace('/login.html');
+          return;
+        }
+
+        // verify token with server
+        try {
+          const res = await fetch('/api/verify', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ token }) });
+          if (!res.ok) throw new Error('Invalid token');
+          const json = await res.json();
+          if (!json || !json.valid) throw new Error('Invalid token');
+        } catch (err) {
+          // invalid token => force login
+          sessionStorage.removeItem('authToken');
+          location.replace('/login.html');
+          return;
         }
 
         // if redirected after login, show a temporary success message
