@@ -208,6 +208,41 @@ app.post('/api/logout', (req, res) => {
   }
 });
 
+// Diagnostic status endpoint to help hosted deployments debug storage issues
+app.get('/api/status', (req, res) => {
+  try {
+    const campaignsExist = fs.existsSync(DATA_FILE);
+    const contactsExist = fs.existsSync(CONTACTS_FILE);
+    const sessionsExist = fs.existsSync(SESSIONS_FILE);
+
+    const safeRead = (p) => {
+      try {
+        return JSON.parse(fs.readFileSync(p, 'utf-8') || '[]');
+      } catch (e) {
+        return null;
+      }
+    };
+
+    const campaigns = campaignsExist ? safeRead(DATA_FILE) : null;
+    const contacts = contactsExist ? safeRead(CONTACTS_FILE) : null;
+    const sessions = sessionsExist ? safeRead(SESSIONS_FILE) : null;
+
+    return res.json({
+      DATA_DIR: DATA_DIR,
+      DATA_DIR_WRITABLE: !!DATA_DIR_WRITABLE,
+      requested_DATA_DIR: REQUESTED_DATA_DIR,
+      files: {
+        campaigns: { path: DATA_FILE, exists: campaignsExist, count: Array.isArray(campaigns) ? campaigns.length : null },
+        contacts: { path: CONTACTS_FILE, exists: contactsExist, count: Array.isArray(contacts) ? contacts.length : null },
+        sessions: { path: SESSIONS_FILE, exists: sessionsExist, count: Array.isArray(sessions) ? sessions.length : null },
+      }
+    });
+  } catch (err) {
+    console.error('Status error', err);
+    return res.status(500).json({ error: err.message || String(err) });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Requested DATA_DIR: ${REQUESTED_DATA_DIR}`);
