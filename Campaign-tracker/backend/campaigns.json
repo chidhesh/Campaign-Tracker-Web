@@ -18,6 +18,13 @@
     "name": "Galaxy Beyond Limits",
     "client": "Samsung Electronics",
     "startDate": "2025-10-14",
-    "status": "Paused"
+    "status": "Completed"
+  },
+  {
+    "id": 1762677240017,
+    "name": "Summer Shine",
+    "client": "GlowSkin Naturals",
+    "startDate": "2025-11-09",
+    "status": "Completed"
   }
 ]

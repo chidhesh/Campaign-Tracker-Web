@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:5000/api/campaigns";
+const API_URL = "/api/campaigns";
 
 async function loadDashboard() {
   try {
