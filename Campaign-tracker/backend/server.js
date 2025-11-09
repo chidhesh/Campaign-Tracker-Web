@@ -1,4 +1,5 @@
 import express from "express";
+import cookieParser from 'cookie-parser';
 import fs from "fs";
 import cors from "cors";
 import bodyParser from "body-parser";
@@ -37,6 +38,7 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
+app.use(cookieParser());
 
 // Ensure data directory exists and is writable. If the requested directory
 // cannot be created or isn't writable (common on some hosted platforms),
@@ -95,8 +97,26 @@ app.use((req, res, next) => {
 // can be loaded from the same origin as the API (avoids file:// / CORS issues).
 const FRONTEND_DIR = path.resolve(process.cwd(), '..', 'frontend');
 if (fs.existsSync(FRONTEND_DIR)) {
+  // Protect main UI routes by requiring a valid auth cookie. If no valid
+  // cookie is present, redirect to the login page.
+  const protectedPaths = ['/', '/index.html', '/dashboard.html'];
+  app.get(protectedPaths, (req, res, next) => {
+    try {
+      const token = req.cookies && req.cookies.authToken;
+      if (!token) return res.redirect('/login.html');
+      const sessions = JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf-8') || '[]');
+      const found = sessions.find(s => s.token === token);
+      if (!found) return res.redirect('/login.html');
+      // token valid
+      next();
+    } catch (err) {
+      console.warn('Auth-check error', err && err.message);
+      return res.redirect('/login.html');
+    }
+  });
+
   app.use(express.static(FRONTEND_DIR));
-  // optional: serve index.html at root
+  // optional: serve index.html at root (will be protected by the middleware above)
   app.get('/', (req, res) => res.sendFile(path.join(FRONTEND_DIR, 'index.html')));
 }
 
@@ -169,6 +189,9 @@ app.post('/api/login', (req, res) => {
       const entry = { token, username, issuedAt: new Date().toISOString() };
       sessions.push(entry);
       fs.writeFileSync(SESSIONS_FILE, JSON.stringify(sessions, null, 2));
+      // set an httpOnly cookie so subsequent requests to the server can be
+      // identified and protected by middleware. Cookie is set for the root path.
+      res.cookie('authToken', token, { httpOnly: true, sameSite: 'Lax' });
       return res.json({ success: true, token });
     }
     return res.status(401).json({ success: false, message: 'Invalid credentials' });
@@ -201,6 +224,8 @@ app.post('/api/logout', (req, res) => {
     let sessions = JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf-8') || '[]');
     sessions = sessions.filter(s => s.token !== token);
     fs.writeFileSync(SESSIONS_FILE, JSON.stringify(sessions, null, 2));
+    // clear cookie as well
+    res.clearCookie('authToken');
     return res.json({ success: true });
   } catch (err) {
     console.error('Logout error', err);
