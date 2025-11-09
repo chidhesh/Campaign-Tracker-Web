@@ -1,0 +1,45 @@
+<!-- dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Campaign Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    
+    <div class="logo"> <img src="images/logo.png" alt="Logo" class="logo-img" width="50" height="50"><span>Campaign Tracker</span></div>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="dashboard.html">Dashboard</a></li>
+    </ul>
+  </nav>
+
+  <section id="dashboard">
+    <h2>Dashboard Summary</h2>
+    <p id="dashboardMessage" style="color:#b00"></p>
+    <div class="summary">
+      <div class="card">
+        <h3>Total</h3>
+        <p id="totalCount">0</p>
+      </div>
+      <div class="card">
+        <h3>Active</h3>
+        <p id="activeCount">0</p>
+      </div>
+      <div class="card">
+        <h3>Paused</h3>
+        <p id="pausedCount">0</p>
+      </div>
+      <div class="card">
+        <h3>Completed</h3>
+        <p id="completedCount">0</p>
+      </div>
+    </div>
+  </section>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

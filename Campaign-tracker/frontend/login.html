@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Login - Campaign Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main style="display:flex;align-items:center;justify-content:center;height:100vh;">
+    <div class="login-card">
+      <h2>Sign in</h2>
+      <form id="loginForm">
+        <label>Username
+          <input type="text" id="username" name="username" required>
+        </label>
+        <label>Password
+          <input type="password" id="password" name="password" required>
+        </label>
+  <button type="button" id="loginBtn">Login</button>
+        <p id="loginStatus" style="color:var(--muted); margin-top:8px; display:none;"></p>
+      </form>
+    </div>
+  </main>
+  <script src="login.js"></script>
+</body>
+</html>
