@@ -3,12 +3,21 @@ import fs from "fs";
 import cors from "cors";
 import bodyParser from "body-parser";
 import path from 'path';
+import os from 'os';
 
 const app = express();
 const PORT = 5000;
-const DATA_FILE = "./campaigns.json";
-const CONTACTS_FILE = "./contacts.json";
-const SESSIONS_FILE = "./sessions.json";
+// Store data files in a folder inside the user's home directory
+const DATA_DIR = path.join(os.homedir(), 'CampaignTrackerData');
+const DATA_FILE = path.join(DATA_DIR, 'campaigns.json');
+const CONTACTS_FILE = path.join(DATA_DIR, 'contacts.json');
+const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
+
+// If repository still contains older files in the backend folder, we'll
+// migrate them to the home data directory on first run (only if target missing).
+const REPO_DATA_CAMPAIGNS = path.resolve(process.cwd(), 'campaigns.json');
+const REPO_DATA_CONTACTS = path.resolve(process.cwd(), 'contacts.json');
+const REPO_DATA_SESSIONS = path.resolve(process.cwd(), 'sessions.json');
 
 // Allow all origins and log origin for debugging (accept 'null' from file://)
 const corsOptions = {
@@ -20,6 +29,29 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
+
+// Ensure data directory exists
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+// Migrate existing repo files into home data directory if target files do not exist
+try {
+  if (fs.existsSync(REPO_DATA_CAMPAIGNS) && !fs.existsSync(DATA_FILE)) {
+    fs.copyFileSync(REPO_DATA_CAMPAIGNS, DATA_FILE);
+    console.log('Migrated campaigns.json to', DATA_FILE);
+  }
+  if (fs.existsSync(REPO_DATA_CONTACTS) && !fs.existsSync(CONTACTS_FILE)) {
+    fs.copyFileSync(REPO_DATA_CONTACTS, CONTACTS_FILE);
+    console.log('Migrated contacts.json to', CONTACTS_FILE);
+  }
+  if (fs.existsSync(REPO_DATA_SESSIONS) && !fs.existsSync(SESSIONS_FILE)) {
+    fs.copyFileSync(REPO_DATA_SESSIONS, SESSIONS_FILE);
+    console.log('Migrated sessions.json to', SESSIONS_FILE);
+  }
+} catch (err) {
+  console.error('Migration error:', err.message || err);
+}
 
 // Simple request logger to help debug client requests
 app.use((req, res, next) => {
@@ -144,4 +176,10 @@ app.post('/api/logout', (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Data directory: ${DATA_DIR}`);
+  console.log(`Campaigns: ${DATA_FILE}`);
+  console.log(`Contacts: ${CONTACTS_FILE}`);
+  console.log(`Sessions: ${SESSIONS_FILE}`);
+});
