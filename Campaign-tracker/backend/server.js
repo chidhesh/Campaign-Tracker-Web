@@ -7,11 +7,19 @@ import os from 'os';
 
 const app = express();
 const PORT = 5000;
-// Store data files in a folder inside the user's home directory
-const DATA_DIR = path.join(os.homedir(), 'CampaignTrackerData');
-const DATA_FILE = path.join(DATA_DIR, 'campaigns.json');
-const CONTACTS_FILE = path.join(DATA_DIR, 'contacts.json');
-const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
+// Determine data directory: prefer environment variable (useful on hosting)
+// Fall back to user's home directory. If that path is not writable on the
+// host (some PaaS have read-only home dirs), fall back to a local `data/`
+// folder inside the project so the server still works.
+const REQUESTED_DATA_DIR = process.env.DATA_DIR || path.join(os.homedir(), 'CampaignTrackerData');
+let DATA_DIR = REQUESTED_DATA_DIR;
+let DATA_DIR_WRITABLE = false;
+
+// Helper to build file paths inside DATA_DIR
+const dataPath = (name) => path.join(DATA_DIR, name);
+let DATA_FILE = dataPath('campaigns.json');
+let CONTACTS_FILE = dataPath('contacts.json');
+let SESSIONS_FILE = dataPath('sessions.json');
 
 // If repository still contains older files in the backend folder, we'll
 // migrate them to the home data directory on first run (only if target missing).
@@ -30,10 +38,34 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
 
-// Ensure data directory exists
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+// Ensure data directory exists and is writable. If the requested directory
+// cannot be created or isn't writable (common on some hosted platforms),
+// fall back to a local 'data' directory inside the app.
+try {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  // test writability
+  fs.accessSync(DATA_DIR, fs.constants.R_OK | fs.constants.W_OK);
+  DATA_DIR_WRITABLE = true;
+} catch (err) {
+  console.warn(`Data dir '${REQUESTED_DATA_DIR}' not writable or inaccessible: ${err.message || err}`);
+  // fallback to local data folder inside project
+  DATA_DIR = path.join(process.cwd(), 'data');
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    fs.accessSync(DATA_DIR, fs.constants.R_OK | fs.constants.W_OK);
+    DATA_DIR_WRITABLE = true;
+    console.info(`Falling back to local data dir: ${DATA_DIR}`);
+  } catch (err2) {
+    // if still not writable, continue but note that writes will fail
+    DATA_DIR_WRITABLE = false;
+    console.error(`Local fallback data dir '${DATA_DIR}' is not writable: ${err2.message || err2}`);
+  }
 }
+
+// recompute file paths in case DATA_DIR changed
+DATA_FILE = dataPath('campaigns.json');
+CONTACTS_FILE = dataPath('contacts.json');
+SESSIONS_FILE = dataPath('sessions.json');
 
 // Migrate existing repo files into home data directory if target files do not exist
 try {
@@ -178,8 +210,10 @@ app.post('/api/logout', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Data directory: ${DATA_DIR}`);
+  console.log(`Requested DATA_DIR: ${REQUESTED_DATA_DIR}`);
+  console.log(`Using DATA_DIR: ${DATA_DIR} (writable: ${DATA_DIR_WRITABLE})`);
   console.log(`Campaigns: ${DATA_FILE}`);
   console.log(`Contacts: ${CONTACTS_FILE}`);
   console.log(`Sessions: ${SESSIONS_FILE}`);
+  if (!DATA_DIR_WRITABLE) console.warn('Warning: data directory is not writable; saving will fail on this host. Configure DATA_DIR to a writable path or use a database.');
 });

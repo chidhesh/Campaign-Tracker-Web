@@ -8,16 +8,14 @@
 </head>
 <body>
   <script>
-    // Redirect to login if not authenticated by verifying token with server
+    // Auth check: verify token if present, but don't force-redirect guests.
+    // This allows the dashboard and campaigns table to be visible to unauthenticated users.
     (async function(){
       try {
         const params = new URLSearchParams(location.search);
         const token = sessionStorage.getItem('authToken');
-        if (!token && !params.get('bypassAuth')) {
-          location.replace('/login.html');
-          return;
-        }
-        // verify with server
+
+        // If a token exists, verify it with the server. If verification fails, remove it.
         if (token) {
           try {
             const res = await fetch('/api/verify', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ token }) });
@@ -25,12 +23,14 @@
             const json = await res.json();
             if (!json || !json.valid) throw new Error('Invalid token');
           } catch (err) {
-            // invalid token => force login
+            console.warn('Token invalid, clearing stored token', err);
             sessionStorage.removeItem('authToken');
-            location.replace('/login.html');
-            return;
           }
+        } else {
+          // No token: continue as guest (do not redirect). Login page remains available at /login.html.
+          console.info('No auth token found; continuing as guest.');
         }
+
         // if redirected after login, show a temporary success message
         if (params.get('login') === 'success') {
           setTimeout(() => alert('Login successfully'), 200);
